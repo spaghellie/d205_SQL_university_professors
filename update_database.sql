@@ -1,6 +1,10 @@
 -- For right now, the only table that exists in our database is the <university_professors> table, which holds more than just this one entity!
 -- So we're going to update our database model to more qppropriately suit our data.
 
+-- -- -- -- -- -- -- -- -- --
+
+-- First thing's first: make tables for each of the entities...
+
 -- Create a table for the professors entity type
 CREATE TABLE professors (
  firstname text,
@@ -26,8 +30,8 @@ ADD COLUMN university_shortname text;
 
 -- -- -- -- -- -- -- -- -- --
 
--- We now need to migrate the original data to these new tables
--- -- -- -- --
+-- We now need to migrate the original data to these new tables...
+
 -- Insert unique professors into the new table
 INSERT INTO professors 
 SELECT DISTINCT firstname, lastname, university_shortname 
@@ -44,15 +48,15 @@ FROM university_professors;
 
 -- -- -- -- -- -- -- -- -- --
 
--- We must now delete the unnecessary university_professors table (because we no longer need it)
--- -- -- -- --
+-- We must now delete the unnecessary university_professors table (because we no longer need it)...
+
 -- Delete the university_professors table
 DROP TABLE university_professors;
 
 -- -- -- -- -- -- -- -- -- --
 
--- We can set up some constraints
--- -- -- -- --
+-- We can set up some constraints...
+
 -- Disallow NULL values in firstname
 ALTER TABLE professors 
 ALTER COLUMN firstname SET NOT NULL;
@@ -69,12 +73,12 @@ ADD CONSTRAINT university_shortname_unq UNIQUE(university_shortname);
 ALTER TABLE organizations
 ADD CONSTRAINT organization_unq UNIQUE(organization);
 
--- Add *Key Constraints* to the appropriate tables (organizations, professors, & universities)
+-- Add *Key Constraints* to the appropriate tables (organizations, professors, & universities)...
+
 -- For organizations:
 -- Rename the organization column to id
 ALTER TABLE organizations
 RENAME COLUMN organization TO id;
-
 -- Make id a *primary key*
 ALTER TABLE organizations
 ADD CONSTRAINT organization_pk PRIMARY KEY (id);
@@ -83,7 +87,6 @@ ADD CONSTRAINT organization_pk PRIMARY KEY (id);
 -- Rename the university_shortname column to id
 ALTER TABLE universities
 RENAME COLUMN university_shortname TO id;
-
 -- Make id a *primary key*
 ALTER TABLE universities
 ADD CONSTRAINT university_pk PRIMARY KEY (id);
@@ -99,4 +102,60 @@ ALTER TABLE professors
 ADD CONSTRAINT professors_pkey PRIMARY KEY (id);
 -- Have a look at the first 10 rows of professors
 SELECT * FROM professors
+LIMIT 10;
+
+-- -- -- -- -- -- -- -- -- -- (Modeling 1:N Relationships) (<-- NOTE this is only in the professors-to-universities relationship)
+
+-- We should make sure that our tables are able to reference one another (with Foreign Keys [FKs])...
+
+-- In this database, we want the professors table to reference the universities table.
+-- Here's FK from professors to universities:
+-- Rename the university_shortname column
+ALTER TABLE professors
+RENAME COLUMN university_shortname TO university_id;
+-- Add a foreign key on professors referencing universities
+ALTER TABLE professors 
+ADD CONSTRAINT professors_fkey FOREIGN KEY (university_id) REFERENCES universities (id);
+-- NOTE that inserting a professor with non-existing university ID would violate the foreign key constraint we just made!
+
+-- -- -- -- -- -- -- -- -- --
+
+-- We could now JOIN two tables that are linked by a foreign key!
+
+-- (consider, specifically, i.e. retain all records where the foreign key of professors is equal to the primary key of universities)
+-- Select all professors working for universities in the city of Zurich
+SELECT professors.lastname, universities.id, universities.university_city
+FROM professors
+JOIN universities
+ON professors.university_id = universities.id
+WHERE universities.university_city = 'Zurich';
+
+-- -- -- -- -- -- -- -- -- -- (Modeling N:M Relationships) (<-- such as with the professors-to-organizations-via-affiliations relationship)
+
+-- Note that we are remodeling our database (see "final database model" ER diagram in your notebook),
+-- to include the N:M relationship that affiliations facilitates between professors & organizations.
+
+-- Because we've already created the affiliations table, we need to restructure it; giving it a new form complete with foreign keys that point to and from those other 2 entities!
+
+-- Add a professor_id column
+ALTER TABLE affiliations
+ADD COLUMN professor_id integer REFERENCES professors (id);
+
+-- Rename the organization column to organization_id
+ALTER TABLE affiliations
+RENAME organization TO organization_id;
+
+-- Add a foreign key on organization_id
+ALTER TABLE affiliations
+ADD CONSTRAINT affiliations_organization_fkey FOREIGN KEY (organization_id) REFERENCES organizations (id);
+
+-- Populate the "professor_id" column now!
+-- Update professor_id to professors.id where firstname, lastname correspond to rows in professors
+UPDATE affiliations
+SET professor_id = professors.id
+FROM professors
+WHERE affiliations.firstname = professors.firstname AND affiliations.lastname = professors.lastname;
+
+-- Have a look at the 10 first rows of affiliations again
+SELECT * FROM affiliations
 LIMIT 10;
