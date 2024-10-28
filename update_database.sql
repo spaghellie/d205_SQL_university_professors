@@ -68,3 +68,24 @@ ADD CONSTRAINT university_shortname_unq UNIQUE(university_shortname);
 -- Make organizations.organization unique
 ALTER TABLE organizations
 ADD CONSTRAINT organization_unq UNIQUE(organization);
+
+-- Add *Key Constraints* to the appropriate tables (organizations, professors, & universities)
+-- For organizations:
+-- Rename the organization column to id
+ALTER TABLE organizations
+RENAME COLUMN organization TO id;
+
+-- Make id a *primary key*
+ALTER TABLE organizations
+ADD CONSTRAINT organization_pk PRIMARY KEY (id);
+
+-- For universities:
+-- Rename the university_shortname column to id
+ALTER TABLE universities
+RENAME COLUMN university_shortname TO id;
+
+-- Make id a *primary key*
+ALTER TABLE universities
+ADD CONSTRAINT university_pk PRIMARY KEY (id);
+
+-- For professors:
