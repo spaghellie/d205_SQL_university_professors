@@ -159,3 +159,125 @@ WHERE affiliations.firstname = professors.firstname AND affiliations.lastname = 
 -- Have a look at the 10 first rows of affiliations again
 SELECT * FROM affiliations
 LIMIT 10;
+
+-- NOTE that {firstname, lastname} is a candidate key of professors, but NOT in affiliations (because professors can have more than one affiliation).
+-- So we can drop those columns in the aff. table (in order to reduce redundancy).
+-- Drop the firstname column
+ALTER TABLE affiliations
+DROP COLUMN firstname;
+
+-- Drop the lastname column
+ALTER TABLE affiliations
+DROP COLUMN lastname;
+
+-- -- -- -- -- -- -- -- -- -- Changing Referential Integrity behavior of certain key(s)
+
+-- So far, we've implemented 3 foreign key constraints:
+-- 1) professors.university_id TO universities.id
+-- 2) affiliations.organization_id TO organizations.id
+-- 3) affiliations.professor_id to professors.id
+-- For now, these keys each have behavior DELETE NO ACTION and throw an error when you try to violate ref. integrity.
+
+-- We're going to play with one of the FKs' behavior...
+
+-- Identify the correct constraint name
+SELECT constraint_name, table_name, constraint_type
+FROM information_schema.table_constraints
+WHERE constraint_type = 'FOREIGN KEY';
+
+-- For this EX., let's say we want to CASCADE deletion if a referenced record in "organizations" is deleted...
+-- Drop the right foreign key constraint
+ALTER TABLE affiliations
+DROP CONSTRAINT affiliations_organization_id_fkey;
+
+-- Add a new foreign key constraint from affiliations to organizations which cascades deletion
+ALTER TABLE affiliations
+ADD CONSTRAINT affiliations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE;
+
+-- Let's see if that does the trick...
+-- EX. (part 2):
+-- Delete an organization 
+DELETE FROM organizations 
+WHERE id = 'CUREM';
+
+-- Check that no more affiliations with this organization exist
+SELECT * FROM affiliations
+WHERE organization_id = 'CUREM';
+
+-- -- -- -- -- -- -- -- -- -- USING the database to answer real-world questions!
+
+-- Let's run some example SQL queries on the database.
+--
+-- EX.1:
+-- Find out which university has the most affiliations (through its professors)
+-- -- --
+-- SOLUTION:
+-- Count the total number of affiliations per university
+SELECT COUNT(*), professors.university_id 
+FROM affiliations
+JOIN professors
+ON affiliations.professor_id = professors.id
+-- Group by the university ids of professors
+GROUP BY professors.university_id 
+ORDER BY count DESC;
+--
+--
+-- EX. 2:
+-- Find the university city of the professor with the most affiliations in the sector "Media & communication."
+-- -- --
+-- SOLUTION:
+-- STEP 1;
+--   Join all tables
+--      SELECT *
+--      FROM affiliations
+--      JOIN professors
+--      ON affiliations.professor_id = professors.id
+--      JOIN organizations
+--      ON affiliations.organization_id = organizations.id
+--      JOIN universities
+--      ON professors.university_id = universities.id;
+--
+-- STEP 2;
+--   Group the table by organization sector, professor ID and university city & COUNT the number of rows
+--      SELECT COUNT(*), organizations.organization_sector, professors.id, universities.university_city
+--   FROM affiliations
+--   JOIN professors
+--   ON affiliations.professor_id = professors.id
+--   JOIN organizations
+--   ON affiliations.organization_id = organizations.id
+--   JOIN universities
+--   ON professors.university_id = universities.id;
+--      GROUP BY organizations.organization_sector, professors.id, universities.university_city;
+--
+-- STEP 3;
+--   Only retain rows with "Media & communication" as organization sector, and sort the table by count, in descending order.
+--   SELECT COUNT(*), organizations.organization_sector, professors.id, universities.university_city
+--   FROM affiliations
+--   JOIN professors
+--   ON affiliations.professor_id = professors.id
+--   JOIN organizations
+--   ON affiliations.organization_id = organizations.id
+--   JOIN universities
+--   ON professors.university_id = universities.id;
+--      WHERE organizations.organization_sector = 'Media & communication'
+--   GROUP BY organizations.organization_sector, professors.id, universities.university_city
+--      ORDER BY COUNT(*) DESC;
+--
+-- So(!!!) here's our final query:
+
+-- Filter the table and sort it
+SELECT COUNT(*), organizations.organization_sector, professors.id, universities.university_city
+FROM affiliations
+JOIN professors
+ON affiliations.professor_id = professors.id
+JOIN organizations
+ON affiliations.organization_id = organizations.id
+JOIN universities
+ON professors.university_id = universities.id
+WHERE organizations.organization_sector = 'Media & communication'
+GROUP BY organizations.organization_sector, professors.id, universities.university_city
+ORDER BY COUNT DESC;
+
+-- -- -- After running the code above, we can see that whoever the professor with id #538 is 
+-- -- -- has the most affiliations in the "Media & communications"
+-- -- -- and that s/he lives in Lausanne.
