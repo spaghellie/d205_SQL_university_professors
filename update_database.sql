@@ -89,3 +89,14 @@ ALTER TABLE universities
 ADD CONSTRAINT university_pk PRIMARY KEY (id);
 
 -- For professors:
+-- (Since there's no single column candidate key [only a composite key candidate consisting of firstname, lastname],
+-- we'll add a new column, "id," to that table.)
+-- Add the new column to the table
+ALTER TABLE professors
+ADD COLUMN id serial;
+-- Make id a primary key
+ALTER TABLE professors 
+ADD CONSTRAINT professors_pkey PRIMARY KEY (id);
+-- Have a look at the first 10 rows of professors
+SELECT * FROM professors
+LIMIT 10;
