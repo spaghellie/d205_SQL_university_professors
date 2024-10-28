@@ -17,3 +17,11 @@ CREATE TABLE students (
 );
 -- NOTE that we added a PRIMARY KEY for the ssn;
 -- and that there is no formal length requirement for the integer column. The application would have to make sure it's a correct SSN!
+
+-- -- -- -- -- -- -- -- -- --
+
+-- A note about FOREIGN KEYS:
+
+-- Specifying FKs to existing tables
+ALTER TABLE a
+ADD CONSTRAINT a_fkey FOREIGN KEY (b_id) REFERENCES b (id);
